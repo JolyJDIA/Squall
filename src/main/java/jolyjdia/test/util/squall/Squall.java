@@ -25,6 +25,6 @@ public interface Squall<U> extends AutoCloseable {
 
     TerminalSquall<U> executeQuery();
 
-    TerminalSquall<U> getGenerateKey();
+    TerminalSquall<U> getGeneratedKeys();
 
 }

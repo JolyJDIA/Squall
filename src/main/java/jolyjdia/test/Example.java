@@ -35,7 +35,7 @@ public final class Example {
         DB.ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
                 .parameters("LemonTea")
                 .execute()
-                .getGenerateKey()
+                .getGeneratedKeys()
                 .doOnNext(e -> System.out.println(e.getInt(1)));
     }
 }

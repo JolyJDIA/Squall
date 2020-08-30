@@ -102,7 +102,7 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
     }
 
     @Override
-    public TerminalSquall<U> getGenerateKey() {
+    public TerminalSquall<U> getGeneratedKeys() {
         return new TerminalSquall0(evaluate(() -> {
             try {
                 return (U) statement.getGeneratedKeys();
