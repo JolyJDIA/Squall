@@ -1,4 +1,4 @@
-#Squall
+# Squall
 
 Библиотека предназначена для выполнения запрос к бд
 Делать это можно асинхронно (добавив .async)
@@ -11,7 +11,7 @@
 
 Вот примеры кода:
 ```java
-//async
+        //async
         DB.ofPrepare("SELECT * FROM `identifier_players`")
                 .async()
                 .executeQuery()
@@ -30,7 +30,7 @@
         DB.ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
                 .parameters("LemonTea")
                 .execute()
-                .getGenerateKey()
+                .getGeneratedKeys()
                 .doOnNext(e -> System.out.println(e.getInt(1)));
 ```
 
