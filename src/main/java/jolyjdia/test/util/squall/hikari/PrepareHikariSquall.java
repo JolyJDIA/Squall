@@ -20,6 +20,9 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
     public PrepareHikariSquall(Connection connection, String sql) throws SQLException {
         this.statement = (this.connection = connection).prepareStatement(sql);
     }
+    public PrepareHikariSquall(Connection connection, String sql, int key) throws SQLException {
+        this.statement = (this.connection = connection).prepareStatement(sql, key);
+    }
 
     @Override
     public Squall<U> parameters(Object... obj) {
@@ -48,11 +51,36 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
     }
 
     @Override
-    public U execute() {
+    public Squall<U> addBatch() {
+        try {
+            statement.addBatch();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    @Override
+    public Squall<U> execute() {
         assertOpen();
         return evaluate(() -> {
             try {
-                return (U) Boolean.valueOf(statement.execute());
+                statement.execute();
+                return this;
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } finally {
+                close();
+            }
+        });
+    }
+
+    @Override
+    public int[] executeBatch() {
+        assertOpen();
+        return evaluate(() -> {
+            try {
+                return statement.executeBatch();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
@@ -67,6 +95,17 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
         return new TerminalSquall0(evaluate(() -> {
             try {
                 return (U) statement.executeQuery();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }));
+    }
+
+    @Override
+    public TerminalSquall<U> getGenerateKey() {
+        return new TerminalSquall0(evaluate(() -> {
+            try {
+                return (U) statement.getGeneratedKeys();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

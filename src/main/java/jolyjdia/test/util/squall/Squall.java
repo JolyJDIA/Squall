@@ -13,9 +13,18 @@ public interface Squall<U> extends AutoCloseable {
 
     Squall<U> set(int index, Object x);
 
+    Squall<U> setFetchSize(int rows);
+
+    Squall<U> addBatch();
+
     boolean isAsync();
 
-    U execute();
+    Squall<U> execute();
+
+    int[] executeBatch();
 
     TerminalSquall<U> executeQuery();
+
+    TerminalSquall<U> getGenerateKey();
+
 }

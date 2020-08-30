@@ -43,6 +43,9 @@ public abstract class HikariConnectionFactory implements SqlConnection {
     public <T> Squall<T> ofPrepare(String sql) throws SQLException {
         return new PrepareHikariSquall<>(getConnection(), sql);
     }
+    public <T> Squall<T> ofPrepare(String sql, int key) throws SQLException {
+        return new PrepareHikariSquall<>(getConnection(), sql, key);
+    }
     @Override
     public void close() {
         if (dataSource != null) {

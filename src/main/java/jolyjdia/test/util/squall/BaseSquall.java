@@ -27,13 +27,25 @@ public abstract class BaseSquall<U> implements Squall<U> {
         this.executor = executor;
         return (BaseSquall<CompletableFuture<U>>) this;
     }
+
     @Override
     public boolean isAsync() {
         return async;
     }
-    protected U evaluate(Supplier<? extends U> supplier) {
+
+    @Override
+    public Squall<U> setFetchSize(int rows) {
+        try {
+            getStatement().setFetchSize(rows);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return this;
+    }
+
+    protected <R> R evaluate(Supplier<? extends R> supplier) {
         return async
-                ? (U)CompletableFuture.supplyAsync(supplier, executor)
+                ? (R)CompletableFuture.supplyAsync(supplier, executor)
                 : supplier.get();
     }
 
@@ -157,7 +169,7 @@ public abstract class BaseSquall<U> implements Squall<U> {
     protected void assertOpen() {
         try {
             if (getStatement().isClosed()) {
-                throw new IllegalStateException("Пшел нахуй, я хлопнул");
+                throw new IllegalStateException("Пшел нахуй, я захлопнул");
             }
         } catch (SQLException e) {
             e.printStackTrace();
