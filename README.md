@@ -9,7 +9,7 @@
 добавив async мы мгновенно получаем новый "Squall" обернутый в CompletableFuture
 с перечнем всех методов
 
-Вот примеры кода:
+Вот пример кода:
 ```java
         //async
         DB.ofPrepare("SELECT * FROM `identifier_players`")
@@ -23,12 +23,12 @@
                 .thenAccept(System.out::println);
         //sync
         DB.ofPrepare("SELECT * FROM `identifier_players` WHERE `name` = ? LIMIT 1")
-                .parameters("LemonTea")
+                .parameters("JolyJDIA")
                 .executeQuery()
                 .doOnNext(e -> System.out.println(e.getString(2) + ' ' + e.getInt(1)));
 
         DB.ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
-                .parameters("LemonTea")
+                .parameters("JolyJDIA")
                 .execute()
                 .getGeneratedKeys()
                 .doOnNext(e -> System.out.println(e.getInt(1)));
