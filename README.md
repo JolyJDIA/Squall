@@ -28,7 +28,7 @@
                 .doOnNext(e -> System.out.println(e.getString(2) + ' ' + e.getInt(1)));
 
         DB.ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
-                .parameters("JolyJDIA")
+                .parameters("LemonTea")
                 .execute()
                 .getGeneratedKeys()
                 .doOnNext(e -> System.out.println(e.getInt(1)));
