@@ -11,7 +11,7 @@
 
 Вот примеры кода:
 ```java
-//async
+        //async
         DB.ofPrepare("SELECT * FROM `identifier_players`")
                 .async()
                 .executeQuery()
