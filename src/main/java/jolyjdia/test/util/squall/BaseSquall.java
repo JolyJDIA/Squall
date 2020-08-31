@@ -3,7 +3,6 @@ package jolyjdia.test.util.squall;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -16,16 +15,17 @@ public abstract class BaseSquall<U> implements Squall<U> {
     static final Executor defaultExecutor = Executors.newCachedThreadPool();
     private boolean async;
     private Executor executor;
+    protected Runnable closeAction;
 
     @Override
-    public BaseSquall<CompletableFuture<U>> async() {
+    public Squall<CompletableFuture<U>> async() {
         return async(defaultExecutor);
     }
     @Override
-    public BaseSquall<CompletableFuture<U>> async(Executor executor) {
+    public Squall<CompletableFuture<U>> async(Executor executor) {
         this.async = true;
         this.executor = executor;
-        return (BaseSquall<CompletableFuture<U>>) this;
+        return (Squall<CompletableFuture<U>>) this;
     }
 
     @Override
@@ -34,7 +34,7 @@ public abstract class BaseSquall<U> implements Squall<U> {
     }
 
     @Override
-    public Squall<U> setFetchSize(int rows) {
+    public Squall<U> fetchSize(int rows) {
         try {
             getStatement().setFetchSize(rows);
         } catch (SQLException e) {
@@ -49,22 +49,28 @@ public abstract class BaseSquall<U> implements Squall<U> {
                 : supplier.get();
     }
 
+    @Override
+    public Squall<U> onClose(Runnable closeAction) {
+        this.closeAction = closeAction;
+        return this;
+    }
+
     protected abstract Statement getStatement();
 
-    protected class TerminalSquall0 implements TerminalSquall<U> {
-        final U set;
+    protected class ResultSetTerminal implements ResultSetSquall {
+        final Object set;//либо CompletableFuture<ResultSet> либо ResultSet
 
-        public TerminalSquall0(U set) {
+        public ResultSetTerminal(Object set) {
             this.set = set;
         }
 
         @Override
-        public <R> U collect(Supplier<? extends R> supplier, BiConsumerResultSet<R> accumulator) {
+        public <R> R collect(Supplier<? extends R> supplier, BiConsumerResultSet<? super R> accumulator) {
             R container = supplier.get();
             return apply(resultSet -> {
                 try (ResultSet rs = resultSet) {
                     accumulator.accept(container, rs);
-                    return (U) container;
+                    return container;
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
@@ -85,81 +91,33 @@ public abstract class BaseSquall<U> implements Squall<U> {
         }
 
         @Override
-        public Optional<U> findFirst() {
-            return Optional.ofNullable(apply(resultSet -> {
-                try {
-                    if (resultSet.first()) {
-                        return (U) resultSet;
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }));
-        }
-
-        @Override
-        public Optional<U> findAny() {
-            return Optional.ofNullable(apply(resultSet -> {
-                try {
-                    if (resultSet.next()) {
-                        return (U) resultSet;
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }));
-        }
-
-        @Override
-        public Optional<U> findLast() {
-            return Optional.ofNullable(apply(resultSet -> {
-                try {
-                    if (resultSet.last()) {
-                        return (U) resultSet;
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }));
-        }
-
-        @Override
-        public void map(ConsumerResultSet a) {
-            accept(resultSet -> {
+        public <R> R map(FunctionResultSet<R> function) {
+            return apply(resultSet -> {
                 try (ResultSet rs = resultSet) {
-                    a.accept(rs);
+                    return function.apply(rs);
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    throw new RuntimeException(e);
                 }
             });
         }
-        private U apply(Function<? super ResultSet, ? extends U> function) {
-            try {
-                return async
-                        ? (U) ((CompletionStage<ResultSet>) set).thenApply(function)
-                        : function.apply((ResultSet) set);
-            } finally {
-                close();
-            }
+
+        private <R> R apply(Function<? super ResultSet, ? extends R> function) {
+            return async
+                    ? (R)((CompletionStage<ResultSet>) set).thenApply(function)
+                    : function.apply((ResultSet) set);
         }
         private void accept(Consumer<? super ResultSet> consumer) {
-            try {
-                if (async) {
-                    ((CompletionStage<ResultSet>) set).thenAccept(consumer);
-                } else {
-                    consumer.accept((ResultSet) set);
-                }
-            } finally {
-                close();
+            if (async) {
+                ((CompletionStage<ResultSet>) set).thenAccept(consumer);
+            } else {
+                consumer.accept((ResultSet) set);
             }
         }
     }
 
     @Override
     public void close() {
+        this.closeAction.run();
         try {
             getStatement().close();
         } catch (SQLException e) {

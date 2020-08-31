@@ -1,8 +1,9 @@
 package jolyjdia.test.util.squall.hikari;
 
 import jolyjdia.test.util.squall.BaseSquall;
+import jolyjdia.test.util.squall.Execute;
+import jolyjdia.test.util.squall.ResultSetSquall;
 import jolyjdia.test.util.squall.Squall;
-import jolyjdia.test.util.squall.TerminalSquall;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -61,51 +62,39 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
     }
 
     @Override
-    public Squall<U> execute() {
+    public Execute<U> execute() {
         assertOpen();
-        return evaluate(() -> {
+        return new Execute0<>(evaluate(() -> {
             try {
-                statement.execute();
-                return this;
+                return (U)Boolean.valueOf(statement.execute());
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
                 close();
-            }
-        });
-    }
-
-    @Override
-    public int[] executeBatch() {
-        assertOpen();
-        return evaluate(() -> {
-            try {
-                return statement.executeBatch();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            } finally {
-                close();
-            }
-        });
-    }
-
-    @Override
-    public TerminalSquall<U> executeQuery() {
-        assertOpen();
-        return new TerminalSquall0(evaluate(() -> {
-            try {
-                return (U) statement.executeQuery();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
             }
         }));
     }
 
     @Override
-    public TerminalSquall<U> getGeneratedKeys() {
-        return new TerminalSquall0(evaluate(() -> {
+    public Execute<U> executeBatch() {
+        assertOpen();
+        return new Execute0<>(evaluate(() -> {
             try {
-                return (U) statement.getGeneratedKeys();
+                return (U)statement.executeBatch();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } finally {
+                close();
+            }
+        }));
+    }
+
+    @Override
+    public ResultSetSquall executeQuery() {
+        assertOpen();
+        return new ResultSetTerminal(evaluate(() -> {
+            try {
+                return statement.executeQuery();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -114,8 +103,8 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
 
     @Override
     public void close() {
+        super.close();
         try {
-            statement.close();
             connection.close();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -125,5 +114,27 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
     @Override
     protected Statement getStatement() {
         return statement;
+    }
+
+    public class Execute0<R> implements Execute<R> {
+        private final R r;
+
+        public Execute0(R r) {
+            this.r = r;
+        }
+        @Override
+        public ResultSetSquall generatedKeys() {
+            return new ResultSetTerminal(evaluate(() -> {
+                try {
+                    return statement.getGeneratedKeys();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+        @Override
+        public R get() {
+            return r;
+        }
     }
 }
