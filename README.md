@@ -22,7 +22,7 @@
                 })
                 .thenAccept(System.out::println);
         //sync
-        DB.ofPrepare("SELECT * FROM `identifier_players` WHERE `name` = ? LIMIT 1")
+        DB.ofPrepare("SELECT * FROM `identifier_players` WHERE `name` = ?")
                 .parameters("JolyJDIA")
                 .executeQuery()
                 .doOnNext(e -> System.out.println(e.getString(2) + ' ' + e.getInt(1)));
