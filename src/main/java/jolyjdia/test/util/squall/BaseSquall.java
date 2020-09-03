@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 public abstract class BaseSquall<U> implements Squall<U> {
     static final Executor defaultExecutor = Executors.newCachedThreadPool();
-    private boolean async;
+    protected boolean async;
     private Executor executor;
     protected Runnable closeAction;
 
@@ -43,10 +43,10 @@ public abstract class BaseSquall<U> implements Squall<U> {
         return this;
     }
 
-    protected <R> R evaluate(Supplier<? extends R> supplier) {
-        return async
+    protected <R> U evaluate(Supplier<? extends R> supplier) {
+        return (U)(async
                 ? (R)CompletableFuture.supplyAsync(supplier, executor)
-                : supplier.get();
+                : supplier.get());
     }
 
     @Override
@@ -56,64 +56,6 @@ public abstract class BaseSquall<U> implements Squall<U> {
     }
 
     protected abstract Statement getStatement();
-
-    protected class ResultSetTerminal implements ResultSetSquall {
-        final Object set;//либо CompletableFuture<ResultSet> либо ResultSet
-
-        public ResultSetTerminal(Object set) {
-            this.set = set;
-        }
-
-        @Override
-        public <R> R collect(Supplier<? extends R> supplier, BiConsumerResultSet<? super R> accumulator) {
-            R container = supplier.get();
-            return apply(resultSet -> {
-                try (ResultSet rs = resultSet) {
-                    accumulator.accept(container, rs);
-                    return container;
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-
-        @Override
-        public void doOnNext(ConsumerResultSet action) {
-            accept(resultSet -> {
-                try (ResultSet rs = resultSet) {
-                    while (rs.next()) {
-                        action.accept(rs);
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            });
-        }
-
-        @Override
-        public <R> R map(FunctionResultSet<R> function) {
-            return apply(resultSet -> {
-                try (ResultSet rs = resultSet) {
-                    return function.apply(rs);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-
-        private <R> R apply(Function<? super ResultSet, ? extends R> function) {
-            return async
-                    ? (R)((CompletionStage<ResultSet>) set).thenApply(function)
-                    : function.apply((ResultSet) set);
-        }
-        private void accept(Consumer<? super ResultSet> consumer) {
-            if (async) {
-                ((CompletionStage<ResultSet>) set).thenAccept(consumer);
-            } else {
-                consumer.accept((ResultSet) set);
-            }
-        }
-    }
 
     @Override
     public void close() {

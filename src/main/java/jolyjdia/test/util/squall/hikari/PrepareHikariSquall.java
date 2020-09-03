@@ -1,14 +1,12 @@
 package jolyjdia.test.util.squall.hikari;
 
-import jolyjdia.test.util.squall.BaseSquall;
-import jolyjdia.test.util.squall.Execute;
-import jolyjdia.test.util.squall.ResultSetSquall;
-import jolyjdia.test.util.squall.Squall;
+import jolyjdia.test.util.squall.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.CompletionStage;
 
 /**
  * Zavr GovnoCoder
@@ -66,13 +64,13 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
         assertOpen();
         return new Execute0<>(evaluate(() -> {
             try {
-                return (U)Boolean.valueOf(statement.execute());
+                return statement.execute();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
                 close();
             }
-        }));
+        }), statement, async);
     }
 
     @Override
@@ -80,25 +78,27 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
         assertOpen();
         return new Execute0<>(evaluate(() -> {
             try {
-                return (U)statement.executeBatch();
+                return statement.executeBatch();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
                 close();
             }
-        }));
+        }), statement, async);
     }
 
     @Override
-    public ResultSetSquall executeQuery() {
+    public ResultSetSquall<U> executeQuery() {
         assertOpen();
-        return new ResultSetTerminal(evaluate(() -> {
+        return new ResultSetTerminal<>(evaluate(() -> {
             try {
                 return statement.executeQuery();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
+            } finally {
+                close();
             }
-        }));
+        }), async);
     }
 
     @Override
@@ -116,24 +116,34 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
         return statement;
     }
 
-    public class Execute0<R> implements Execute<R> {
-        private final R r;
+    static class Execute0<U> implements Execute<U> {
+        final U r;
+        final Statement statement;
+        final boolean async;
 
-        public Execute0(R r) {
+        Execute0(U r, Statement statement, boolean async) {
             this.r = r;
+            this.statement = statement;
+            this.async = async;
         }
         @Override
-        public ResultSetSquall generatedKeys() {
-            return new ResultSetTerminal(evaluate(() -> {
-                try {
-                    return statement.getGeneratedKeys();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }));
+        public ResultSetSquall<U> generatedKeys() {
+            try {
+                return new ResultSetTerminal<>(async
+                        ? ((CompletionStage<U>) r).thenApply(e -> {
+                            try {
+                                return statement.getGeneratedKeys();
+                            } catch (SQLException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        })
+                        : statement.getGeneratedKeys(), async);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
         @Override
-        public R get() {
+        public U get() {
             return r;
         }
     }

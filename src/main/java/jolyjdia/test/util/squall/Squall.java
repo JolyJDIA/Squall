@@ -25,6 +25,6 @@ public interface Squall<U> extends AutoCloseable {
 
     Execute<U> executeBatch();
 
-    ResultSetSquall executeQuery();
+    ResultSetSquall<U> executeQuery();
 
 }

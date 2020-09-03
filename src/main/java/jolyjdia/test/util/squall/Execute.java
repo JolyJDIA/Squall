@@ -1,7 +1,7 @@
 package jolyjdia.test.util.squall;
 
 public interface Execute<R> {
-    ResultSetSquall generatedKeys();
+    ResultSetSquall<R> generatedKeys();
 
     R get();
 }

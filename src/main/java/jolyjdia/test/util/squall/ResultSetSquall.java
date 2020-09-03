@@ -4,14 +4,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.function.Supplier;
 
-public interface ResultSetSquall {
-
-    <R> R collect(Supplier<? extends R> supplier,
-                  BiConsumerResultSet<? super R> accumulator);
+public interface ResultSetSquall<U> {
+    
+    <R> U collect(Supplier<? extends R> supplier,
+                  BiConsumerResultSet<R> accumulator);
 
     void doOnNext(ConsumerResultSet action);
 
-    <R> R map(FunctionResultSet<R> a);
+    <R> U map(FunctionResultSet<R> a);
 
     @FunctionalInterface
     interface ConsumerResultSet {
