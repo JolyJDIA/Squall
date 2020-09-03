@@ -20,7 +20,7 @@
                 .map(e -> e.next() ? e.getInt(1) : 0)
                 .thenAccept(System.out::println);
 
-        System.out.println(DB.ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
+        System.out.println(DB.ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?")
                 .parameters("JolyJDIA")
                 .onClose(() -> System.out.println("Squall#2 закрылся"))
                 .executeQuery()
