@@ -3,7 +3,6 @@ package jolyjdia.test;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.Map;
 
 public final class Example {
     //Мария ДеБил
