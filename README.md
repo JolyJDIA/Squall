@@ -11,26 +11,36 @@
 
 Вот пример кода:
 ```java
-        //async
-        DB.ofPrepare("SELECT * FROM `identifier_players`")
+        DB.<Integer>ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
+                .parameters("JolyJDIA")
                 .async()
+                .onClose(() -> System.out.println("Squall#1 закрылся"))
+                .execute()
+                .generatedKeys()
+                .map(e -> e.next() ? e.getInt(1) : 0)
+                .thenAccept(System.out::println);
+
+        DB.<List<String>>ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
+                .parameters("JolyJDIA")
+                .async()
+                .onClose(() -> System.out.println("Squall#2 закрылся"))
                 .executeQuery()
-                .collect(HashMap::new, (map, rs) -> {
+                .collect(ArrayList::new, (objects, rs) -> {
                     while (rs.next()) {
-                        map.put(rs.getInt(1), rs.getString(2));
+                        objects.add(rs.getString(2));
                     }
                 })
                 .thenAccept(System.out::println);
-        //sync
-        DB.ofPrepare("SELECT * FROM `identifier_players` WHERE `name` = ?")
-                .parameters("JolyJDIA")
-                .executeQuery()
-                .doOnNext(e -> System.out.println(e.getString(2) + ' ' + e.getInt(1)));
 
-        DB.ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
-                .parameters("LemonTea")
-                .execute()
-                .generatedKeys()
-                .doOnNext(e -> System.out.println(e.getInt(1)));
+        DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
+                .async()
+                .onClose(() -> System.out.println("Squall#3 закрылся"))
+                .executeQuery()
+                .doOnNext(rs -> System.out.println(rs.getString(2)));
+
+        DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
+                .onClose(() -> System.out.println("Squall#4 закрылся"))
+                .executeQuery()
+                .doOnNext(rs -> System.out.println(rs.getString(2)));
 ```
 

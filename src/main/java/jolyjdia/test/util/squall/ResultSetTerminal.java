@@ -55,7 +55,7 @@ public class ResultSetTerminal<U> implements ResultSetSquall<U> {
 
     private <R> U apply(Function<? super ResultSet, ? extends R> function) {
         return (U) (async
-                ? (R) ((CompletionStage<ResultSet>) set).thenApply(function)
+                ? ((CompletionStage<ResultSet>) set).thenApply(function)
                 : function.apply((ResultSet) set));
     }
 
