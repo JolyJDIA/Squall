@@ -21,7 +21,9 @@ public class ResultSetTerminal<U> implements ResultSetSquall<U> {
         R container = supplier.get();
         return apply(resultSet -> {
             try (ResultSet rs = resultSet) {
-                accumulator.accept(container, rs);
+                while (rs.next()) {
+                    accumulator.accept(container, rs);
+                }
                 return container;
             } catch (SQLException e) {
                 throw new RuntimeException(e);

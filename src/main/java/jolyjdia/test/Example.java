@@ -2,8 +2,8 @@ package jolyjdia.test;
 
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class Example {
     //Мария ДеБил
@@ -25,16 +25,12 @@ public final class Example {
                 .map(e -> e.next() ? e.getInt(1) : 0)
                 .thenAccept(System.out::println);
 
-        DB.<List<String>>ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
+        DB.<Map<Integer, String>>ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
                 .parameters("JolyJDIA")
                 .async()
                 .onClose(() -> System.out.println("Squall#2 закрылся"))
                 .executeQuery()
-                .collect(ArrayList::new, (objects, rs) -> {
-                    while (rs.next()) {
-                        objects.add(rs.getString(2));
-                    }
-                })
+                .collect(HashMap::new, (objects, rs) -> objects.put(rs.getInt(1), rs.getString(2)))
                 .thenAccept(System.out::println);
 
         DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
