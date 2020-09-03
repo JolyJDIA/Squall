@@ -25,22 +25,16 @@ public final class Example {
                 .map(e -> e.next() ? e.getInt(1) : 0)
                 .thenAccept(System.out::println);
 
-        DB.<Map<Integer, String>>ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
+        System.out.println(DB.ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?", Statement.RETURN_GENERATED_KEYS)
                 .parameters("JolyJDIA")
-                .async()
                 .onClose(() -> System.out.println("Squall#2 закрылся"))
                 .executeQuery()
                 .collect(HashMap::new, (objects, rs) -> objects.put(rs.getInt(1), rs.getString(2)))
-                .thenAccept(System.out::println);
+        );
 
         DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
                 .async()
                 .onClose(() -> System.out.println("Squall#3 закрылся"))
-                .executeQuery()
-                .doOnNext(rs -> System.out.println(rs.getString(2)));
-
-        DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
-                .onClose(() -> System.out.println("Squall#4 закрылся"))
                 .executeQuery()
                 .doOnNext(rs -> System.out.println(rs.getString(2)));
     }
