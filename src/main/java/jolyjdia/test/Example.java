@@ -1,41 +1,32 @@
 package jolyjdia.test;
 
+import jolyjdia.test.util.aq.sync.SyncHikariQ;
+
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.HashMap;
 
 public final class Example {
     //Мария ДеБил
     private static final MariaDBConnectionFactory DB = new MariaDBConnectionFactory(
             "root",
             "",
-            "test",
+            "shallcore",
             "localhost:3306");
 
     private Example() {}
 
     public static void main(String[] args) throws SQLException {
-        DB.<Integer>ofPrepare("INSERT INTO `identifier_players` (`name`) VALUES (?)", Statement.RETURN_GENERATED_KEYS)
+        long s = System.currentTimeMillis();
+        DB.ofPrepareQ("INSERT INTO `identifier_players` (`name`) VALUES (?)")
                 .parameters("JolyJDIA")
                 .async()
-                .onClose(() -> System.out.println("Squall#1 закрылся"))
-                .execute()
-                .generatedKeys()
-                .map(e -> e.next() ? e.getInt(1) : 0)
-                .thenAccept(System.out::println);
-
-        System.out.println(DB.ofPrepare("SELECT * FROM `identifier_players` WHERE name = ?")
-                .parameters("JolyJDIA")
-                .onClose(() -> System.out.println("Squall#2 закрылся"))
                 .executeQuery()
-                .collect(HashMap::new, (objects, rs) -> objects.put(rs.getInt(1), rs.getString(2)))
-        );
-
-        DB.ofPrepare("SELECT * FROM `identifier_players`", Statement.RETURN_GENERATED_KEYS)
-                .async()
-                .onClose(() -> System.out.println("Squall#3 закрылся"))
-                .executeQuery()
-                .doOnNext(rs -> System.out.println(rs.getString(2)));
+                .map(e -> 1)
+                .thenApply(e -> {
+                    int d = e;
+                    return d;
+                });
+        long e = System.currentTimeMillis() - s - SyncHikariQ.END;
+        System.out.println(e);
     }
 }
 

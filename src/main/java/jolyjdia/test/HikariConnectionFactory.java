@@ -2,6 +2,7 @@ package jolyjdia.test;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import jolyjdia.test.util.aq.sync.SyncHikariQ;
 import jolyjdia.test.util.squall.Squall;
 import jolyjdia.test.util.squall.hikari.PrepareHikariSquall;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +46,17 @@ public abstract class HikariConnectionFactory implements SqlConnection {
     }
     public <T> Squall<T> ofPrepare(String sql, int key) throws SQLException {
         return new PrepareHikariSquall<>(getConnection(), sql, key);
+    }
+    public <T> SyncHikariQ<T> ofPrepareQ(String sql) throws SQLException {
+        long s = System.currentTimeMillis();
+        try {
+            return new SyncHikariQ<>(getConnection(), sql);
+        } finally {
+            SyncHikariQ.END += System.currentTimeMillis() - s;
+        }
+    }
+    public <T> SyncHikariQ<T> ofPrepareQ(String sql, int key) throws SQLException {
+        return new SyncHikariQ<>(getConnection(), sql, key);
     }
     @Override
     public void close() {

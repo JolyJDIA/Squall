@@ -31,6 +31,7 @@ public abstract class BaseSquall<U> implements Squall<U> {
 
     @Override
     public Squall<U> fetchSize(int rows) {
+        assertOpen();
         try {
             getStatement().setFetchSize(rows);
         } catch (SQLException e) {
@@ -40,8 +41,9 @@ public abstract class BaseSquall<U> implements Squall<U> {
     }
 
     protected <R> U evaluate(Supplier<? extends R> supplier) {
+        assertOpen();
         return (U)(async
-                ? (R)CompletableFuture.supplyAsync(supplier, executor)
+                ? CompletableFuture.supplyAsync(supplier, executor)
                 : supplier.get());
     }
 
@@ -55,7 +57,9 @@ public abstract class BaseSquall<U> implements Squall<U> {
 
     @Override
     public void close() {
-        this.closeAction.run();
+        if(closeAction != null) {
+            this.closeAction.run();
+        }
         try {
             getStatement().close();
         } catch (SQLException e) {

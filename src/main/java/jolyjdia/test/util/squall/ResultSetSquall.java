@@ -1,7 +1,9 @@
 package jolyjdia.test.util.squall;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import jolyjdia.test.util.squall.function.BiConsumerResultSet;
+import jolyjdia.test.util.squall.function.ConsumerResultSet;
+import jolyjdia.test.util.squall.function.FunctionResultSet;
+
 import java.util.function.Supplier;
 
 public interface ResultSetSquall<U> {
@@ -12,17 +14,4 @@ public interface ResultSetSquall<U> {
     void doOnNext(ConsumerResultSet action);
 
     <R> U map(FunctionResultSet<R> a);
-
-    @FunctionalInterface
-    interface ConsumerResultSet {
-        void accept(ResultSet rs) throws SQLException;
-    }
-    @FunctionalInterface
-    interface FunctionResultSet<T> {
-        T apply(ResultSet rs) throws SQLException;
-    }
-    @FunctionalInterface
-    interface BiConsumerResultSet<T> {
-        void accept(T t, ResultSet rs) throws SQLException;
-    }
 }

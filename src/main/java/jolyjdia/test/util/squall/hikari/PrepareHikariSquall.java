@@ -8,10 +8,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CompletionStage;
 
-/**
- * Zavr GovnoCoder
- * @param <U>
- */
 public class PrepareHikariSquall<U> extends BaseSquall<U> {
     private final Connection connection;
     private final PreparedStatement statement;
@@ -51,6 +47,7 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
 
     @Override
     public Squall<U> addBatch() {
+        assertOpen();
         try {
             statement.addBatch();
         } catch (SQLException e) {
@@ -61,7 +58,6 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
 
     @Override
     public Execute<U> execute() {
-        assertOpen();
         return new Execute0<>(evaluate(() -> {
             try {
                 return statement.execute();
@@ -75,7 +71,6 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
 
     @Override
     public Execute<U> executeBatch() {
-        assertOpen();
         return new Execute0<>(evaluate(() -> {
             try {
                 return statement.executeBatch();
@@ -89,7 +84,6 @@ public class PrepareHikariSquall<U> extends BaseSquall<U> {
 
     @Override
     public ResultSetSquall<U> executeQuery() {
-        assertOpen();
         return new ResultSetTerminal<>(evaluate(() -> {
             try {
                 return statement.executeQuery();

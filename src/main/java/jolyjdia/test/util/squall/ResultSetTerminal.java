@@ -1,5 +1,9 @@
 package jolyjdia.test.util.squall;
 
+import jolyjdia.test.util.squall.function.BiConsumerResultSet;
+import jolyjdia.test.util.squall.function.ConsumerResultSet;
+import jolyjdia.test.util.squall.function.FunctionResultSet;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.CompletionStage;
