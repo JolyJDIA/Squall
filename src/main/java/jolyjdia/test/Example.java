@@ -15,7 +15,6 @@ public final class Example {
     private Example() {}
 
     public static void main(String[] args) throws SQLException {
-        long s = System.currentTimeMillis();
         DB.ofPrepareQ("INSERT INTO `identifier_players` (`name`) VALUES (?)")
                 .parameters("JolyJDIA")
                 .async()
@@ -25,8 +24,6 @@ public final class Example {
                     int d = e;
                     return d;
                 });
-        long e = System.currentTimeMillis() - s - SyncHikariQ.END;
-        System.out.println(e);
     }
 }
 

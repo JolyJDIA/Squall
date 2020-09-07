@@ -1,16 +1,16 @@
 package jolyjdia.test.util.aq.sync;
 
 import jolyjdia.test.util.aq.async.AsyncHikariQ;
+import jolyjdia.test.util.squall.function.BiConsumerResultSet;
+import jolyjdia.test.util.squall.function.ConsumerResultSet;
+import jolyjdia.test.util.squall.function.FunctionResultSet;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.function.Supplier;
 
 public class SyncHikariQ<U> implements AutoCloseable {
-    private final PreparedStatement statement;
+    public final PreparedStatement statement;
     private final Connection connection;
-    public static int END = 0;
 
     public SyncHikariQ(Connection connection, String sql) throws SQLException {
         this.statement = (this.connection = connection).prepareStatement(sql);
@@ -35,7 +35,7 @@ public class SyncHikariQ<U> implements AutoCloseable {
     }
 
     public AsyncHikariQ<U> async() {
-        return new AsyncHikariQ<>(statement);
+        return new AsyncHikariQ<>(this);
     }
 
     public SyncHikariQ<U> set(int index, Object x) {
@@ -78,18 +78,83 @@ public class SyncHikariQ<U> implements AutoCloseable {
         }
     }
 
-
-    protected Statement getStatement() {
-        return statement;
-    }
-
-    private void assertOpen() {
+    public void assertOpen() {
         try {
-            if (getStatement().isClosed()) {
+            if (statement.isClosed()) {
                 throw new IllegalStateException("Пшел нахуй, я захлопнул");
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+    static class ExecuteQSync<U> {
+        final U r;
+        final Statement statement;
+
+        ExecuteQSync(U r, Statement statement) {
+            this.r = r;
+            this.statement = statement;
+        }
+
+        public ResultSetTerminalQSync generatedKeys() {
+            try {
+                return new ResultSetTerminalQSync(statement.getGeneratedKeys());
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public ExecuteQSync<U> commit() {
+            try {
+                statement.getConnection().commit();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                //close
+            }
+            return this;
+        }
+
+        public U getR() {
+            return r;
+        }
+    }
+    static class ResultSetTerminalQSync {
+        final ResultSet set;//либо CompletableFuture<ResultSet> либо ResultSet
+
+        public ResultSetTerminalQSync(ResultSet set) {
+            this.set = set;
+        }
+
+        public <R> R collect(Supplier<? extends R> supplier, BiConsumerResultSet<? super R> accumulator) {
+            R container = supplier.get();
+            try (ResultSet rs = set) {
+                while (rs.next()) {
+                    accumulator.accept(container, rs);
+                }
+                return container;
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+        public void doOnNext(ConsumerResultSet action) {
+            try (ResultSet rs = set) {
+                while (rs.next()) {
+                    action.accept(rs);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public <R> R map(FunctionResultSet<? extends R> function) {
+            try (ResultSet rs = set) {
+                return function.apply(rs);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

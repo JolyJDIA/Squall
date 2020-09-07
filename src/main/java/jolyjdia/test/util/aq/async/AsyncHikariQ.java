@@ -1,65 +1,42 @@
 package jolyjdia.test.util.aq.async;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import jolyjdia.test.util.aq.sync.SyncHikariQ;
+import jolyjdia.test.util.squall.function.BiConsumerResultSet;
+import jolyjdia.test.util.squall.function.ConsumerResultSet;
+import jolyjdia.test.util.squall.function.FunctionResultSet;
+
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 public class AsyncHikariQ<U> implements AutoCloseable {
-    private final PreparedStatement statement;
-    private Connection connection;
+    private final SyncHikariQ<U> previousStage;
 
-    public AsyncHikariQ(Connection connection, String sql) throws SQLException {
-        this.statement = (this.connection = connection).prepareStatement(sql);
-    }
-    public AsyncHikariQ(Connection connection, String sql, int key) throws SQLException {
-        this.statement = (this.connection = connection).prepareStatement(sql, key);
-    }
-
-    public AsyncHikariQ(PreparedStatement statement) {
-        this.statement = statement;
+    public AsyncHikariQ(SyncHikariQ<U> previousStage) {
+        this.previousStage = previousStage;
     }
 
     public AsyncHikariQ<U> parameters(Object... obj) {
-        assertOpen();
-        if (obj != null) {
-            int length = obj.length;
-            try {
-                for (int i = 0; i < length; ++i) {
-                    statement.setObject(i + 1, obj[i]);
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
+        previousStage.parameters(obj);
         return this;
     }
 
     public AsyncHikariQ<U> set(int index, Object x) {
-        assertOpen();
-        try {
-            statement.setObject(index, x);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        previousStage.set(index, x);
         return this;
     }
 
     public AsyncHikariQ<U> addBatch() {
-        assertOpen();
-        try {
-            statement.addBatch();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        previousStage.addBatch();
         return this;
     }
 
     public ResultSetTerminalQAsync executeQuery() {
         return new ResultSetTerminalQAsync(CompletableFuture.supplyAsync(() -> {
             try {
-                return statement.executeQuery();
+                return previousStage.statement.executeQuery();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
@@ -70,26 +47,73 @@ public class AsyncHikariQ<U> implements AutoCloseable {
 
     @Override
     public void close() {
-        try {
-            connection.close();
-            statement.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        previousStage.close();
+    }
+    static class ExecuteQAsync<U> {
+        final CompletableFuture<U> r;
+        final Statement statement;
+
+        ExecuteQAsync(CompletableFuture<U> r, Statement statement) {
+            this.r = r;
+            this.statement = statement;
+        }
+
+        public ResultSetTerminalQAsync generatedKeys() {
+            return new ResultSetTerminalQAsync(r.thenApply(u -> {
+                try {
+                    return statement.getGeneratedKeys();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+
+        public CompletableFuture<U> getR() {
+            return r;
         }
     }
+    public static class ResultSetTerminalQAsync {
+        final CompletableFuture<? extends ResultSet> set;//либо CompletableFuture<ResultSet> либо ResultSet
+
+        public ResultSetTerminalQAsync(CompletableFuture<? extends ResultSet> set) {
+            this.set = set;
+        }
+
+        public <R> CompletableFuture<R> collect(Supplier<? extends R> supplier, BiConsumerResultSet<? super R> accumulator) {
+            R container = supplier.get();
+            return set.thenApply(resultSet -> {
+                try (ResultSet rs = resultSet) {
+                    while (rs.next()) {
+                        accumulator.accept(container, rs);
+                    }
+                    return container;
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
 
 
-    protected Statement getStatement() {
-        return statement;
-    }
+        public void doOnNext(ConsumerResultSet action) {
+            set.thenAccept(resultSet -> {
+                try (ResultSet rs = resultSet) {
+                    while (rs.next()) {
+                        action.accept(rs);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
 
-    private void assertOpen() {
-        try {
-            if (getStatement().isClosed()) {
-                throw new IllegalStateException("Пшел нахуй, я захлопнул");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        public <R> CompletableFuture<R> map(FunctionResultSet<? extends R> function) {
+            return set.thenApply(resultSet -> {
+                try (ResultSet rs = resultSet) {
+                    return function.apply(rs);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 }
